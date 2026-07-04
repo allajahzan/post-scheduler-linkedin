@@ -12,7 +12,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     // Optional: handle 401 globally, e.g. redirect to login
-    if (error.response?.status === 401) {
+    const isUnauthorized = error.response?.status === 401;
+    const isUserNotFound =
+      error.response?.status === 404 && error.config?.url === "/user/me";
+
+    if (isUnauthorized || isUserNotFound) {
       if (
         typeof window !== "undefined" &&
         !window.location.pathname.startsWith("/login") &&
