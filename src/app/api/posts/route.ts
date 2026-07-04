@@ -20,7 +20,7 @@ export async function GET() {
         user_id: new ObjectId(session.userId),
         is_deleted: { $ne: true },
       })
-      .sort({ date: 1, time: 1 }) // Sort by date then time ascending
+      .sort({ created_at: 1 }) // Sort by creation time ascending
       .toArray();
 
     return NextResponse.json({ posts });
