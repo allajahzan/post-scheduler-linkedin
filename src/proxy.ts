@@ -41,9 +41,32 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  // Handle root URL (/) redirect
+  if (request.nextUrl.pathname === "/") {
+    if (token) {
+      try {
+        await jwtVerify(token, SECRET_KEY);
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      } catch (error) {
+        // Token invalid, clear it and go to login
+        const response = NextResponse.redirect(new URL("/login", request.url));
+        response.cookies.delete("token");
+        return response;
+      }
+    } else {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*", "/notifications/:path*", "/login"],
+  matcher: [
+    "/",
+    "/dashboard/:path*",
+    "/profile/:path*",
+    "/notifications/:path*",
+    "/login",
+  ],
 };

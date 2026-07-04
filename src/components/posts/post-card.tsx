@@ -1,87 +1,108 @@
-import { Post } from '@/hooks/use-posts';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Calendar, Clock, Image as ImageIcon, Sparkles, Edit, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Calendar, Clock, Pencil, Plus, Trash2 } from "lucide-react";
+import { Post } from "@/hooks/use-posts";
+import { Button } from "@/components/ui/button";
+import { StatusBadge, AppBadge } from "@/components/common/badge";
+
+// ── Empty Slot Card ───────────────────────────────────────────────────────────
+
+export function EmptySlotCard({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="group flex min-h-[260px] w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-border p-6 text-center transition-all duration-200 hover:border-primary hover:bg-card/50"
+    >
+      <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border bg-secondary text-muted-foreground transition-all group-hover:border-primary group-hover:text-primary">
+        <Plus size={22} />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">Empty slot</p>
+        <p className="mt-0.5 text-sm font-semibold text-primary">
+          Schedule a post
+        </p>
+      </div>
+    </button>
+  );
+}
+
+// ── Post Card ─────────────────────────────────────────────────────────────────
 
 interface PostCardProps {
   post: Post;
+  index: number;
   onEdit: (post: Post) => void;
   onDelete: (post: Post) => void;
 }
 
-export function PostCard({ post, onEdit, onDelete }: PostCardProps) {
-  const isPending = post.status === 'pending';
+export function PostCard({ post, index, onEdit, onDelete }: PostCardProps) {
+  const isPending = post.status === "pending";
 
   return (
-    <Card className="flex flex-col h-full overflow-hidden transition-all hover:shadow-md border-border/50">
-      <CardHeader className="p-4 pb-2 flex-row justify-between items-start gap-4">
-        <div className="flex flex-col gap-1.5">
-          <h3 className="font-semibold text-lg leading-tight line-clamp-1" title={post.title}>
-            {post.title}
-          </h3>
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="size-3.5" />
-              <span>{post.date}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="size-3.5" />
-              <span>{post.time}</span>
-            </div>
-          </div>
-        </div>
-        <Badge 
-          variant={isPending ? 'outline' : 'secondary'}
-          className={isPending ? 'border-(--color-status-pending) text-(--color-status-pending)' : 'bg-(--color-status-completed) text-white hover:bg-status-completed/90'}
-        >
-          {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
-        </Badge>
-      </CardHeader>
+    <div className="group relative z-10 flex min-h-[260px] flex-col rounded-2xl border border-border bg-card p-5 transition-all duration-200 hover:border-primary/40 shadow-2xl hover:shadow-lg hover:shadow-primary/5">
+      {/* Header */}
+      <div className="mb-3 flex items-start justify-between gap-2">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          #P{index + 1}
+        </span>
+        <StatusBadge status={post.status} />
+      </div>
 
-      <CardContent className="p-4 pt-2 grow">
-        <p className="text-sm text-muted-foreground line-clamp-3 mb-4">
+      {/* Content — clickable to edit */}
+      <button
+        onClick={() => isPending && onEdit(post)}
+        disabled={!isPending}
+        className="flex-1 text-left disabled:cursor-default"
+      >
+        <h3 className="line-clamp-2 text-sm font-semibold text-foreground">
+          {post.title}
+        </h3>
+        <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
           {post.description}
         </p>
+      </button>
 
-        {(post.image_url || post.generate_image) && (
-          <div className="flex items-center gap-2 text-xs font-medium text-primary bg-primary/10 px-2.5 py-1.5 rounded-md w-fit">
-            {post.generate_image ? (
-              <>
-                <Sparkles className="size-3.5" />
-                AI Image Generated
-              </>
-            ) : (
-              <>
-                <ImageIcon className="size-3.5" />
-                Custom Image Attached
-              </>
-            )}
-          </div>
-        )}
-      </CardContent>
+      {/* Footer */}
+      <div className="mt-4 border-t border-border pt-3">
+        <div className="flex flex-wrap items-center gap-3 text-[11px]">
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <Calendar size={12} />
+            <span className="font-mono">{post.date}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <Clock size={12} />
+            <span className="font-mono">{post.time} IST</span>
+          </span>
+          {post.image_url ? (
+            <AppBadge>🖼️ Custom Image</AppBadge>
+          ) : post.generate_image ? (
+            <AppBadge>🖼️ AI Generated Image</AppBadge>
+          ) : (
+            <AppBadge>No Image</AppBadge>
+          )}
+        </div>
 
-      <CardFooter className="p-4 pt-4 gap-2 border-t mt-auto">
-        <Button 
-          variant="secondary" 
-          className="flex-1 gap-2" 
-          onClick={() => onEdit(post)}
-          disabled={!isPending}
-          title={!isPending ? "Cannot edit a published post" : "Edit post"}
-        >
-          <Edit className="size-4" />
-          Edit
-        </Button>
-        <Button 
-          variant="destructive" 
-          className="flex-1 gap-2" 
-          onClick={() => onDelete(post)}
-        >
-          <Trash2 className="size-4" />
-          Delete
-        </Button>
-      </CardFooter>
-    </Card>
+        <div className="mt-3 flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit(post)}
+            disabled={!isPending}
+            title={!isPending ? "Cannot edit a published post" : "Edit post"}
+            className="text-muted-foreground hover:bg-secondary hover:text-foreground"
+          >
+            <Pencil />
+            Edit
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDelete(post)}
+            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 />
+            Delete
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

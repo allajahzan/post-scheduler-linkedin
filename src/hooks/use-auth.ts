@@ -1,13 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import api from '@/lib/axios';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/axios";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export interface User {
   name: string;
   email: string;
   created_at: string;
   profile_picture?: string;
+  linkedin_token_expires_at?: string;
 }
 
 export interface Quota {
@@ -18,12 +19,13 @@ export interface Quota {
 
 export const useUser = () => {
   return useQuery({
-    queryKey: ['user'],
+    queryKey: ["user"],
     queryFn: async () => {
-      const { data } = await api.get<{ user: User, quota: Quota }>('/user/me');
+      const { data } = await api.get<{ user: User; quota: Quota }>("/user/me");
       return data;
     },
     retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 };
 
@@ -33,15 +35,17 @@ export const useLogout = () => {
 
   return useMutation({
     mutationFn: async () => {
-      await api.post('/auth/logout');
+      await api.post("/auth/logout");
     },
     onSuccess: () => {
-      queryClient.clear();
-      router.push('/login');
-      toast.success('Logged out successfully');
+      queryClient.cancelQueries();
+      queryClient.setQueryData(["user"], null);
+
+      router.replace("/login");
+      toast.success("Logged out successfully");
     },
     onError: () => {
-      toast.error('Failed to logout');
+      toast.error("Failed to logout");
     },
   });
 };

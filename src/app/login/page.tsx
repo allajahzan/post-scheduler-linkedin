@@ -1,57 +1,102 @@
-'use client';
+"use client";
 
-import { useUser } from '@/hooks/use-auth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Briefcase } from 'lucide-react';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useUser } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { LogoHeader } from "@/components/layout/logo-header";
+import { Button } from "@/components/ui/button";
+import { ParticleBackground } from "@/components/ui/particle-bg";
+import { Loader2 } from "lucide-react";
+import { LinkedInIcon } from "@/components/common/linkedin-icon";
 
 export default function LoginPage() {
   const { data, isLoading } = useUser();
   const user = data?.user;
+
   const router = useRouter();
+
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user && !isLoading) {
-      router.replace('/dashboard');
+      router.replace("/dashboard");
     }
   }, [user, isLoading, router]);
 
-  const handleLinkedInLogin = () => {
-    // Redirect to our LinkedIn Auth API route
-    window.location.href = '/api/auth/linkedin';
+  useEffect(() => {
+    // Reset loading if user navigates back via browser back button (bfcache)
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setLoading(false);
+    };
+    window.addEventListener("pageshow", handlePageShow);
+
+    // Also reset on unmount
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      setLoading(false);
+    };
+  }, []);
+
+  const handleLogin = () => {
+    setLoading(true);
+    window.location.href = "/api/auth/linkedin";
   };
 
-  if (isLoading || user) return null;
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-3 items-center text-center">
-          <div className="mb-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Logo" className="h-16 w-16 object-contain mx-auto" />
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">Welcome back to Post Scheduler</CardTitle>
-          <CardDescription>
-            Authenticate securely to access your dashboard
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Button 
-            onClick={handleLinkedInLogin} 
-            className="w-full gap-2 bg-linkedin hover:bg-linkedin-dark text-white" 
-            size="lg"
-          >
-            <Briefcase className="size-5" />
-            Login with LinkedIn
-          </Button>
-          <p className="text-xs text-center text-muted-foreground px-4">
-            By continuing, you agree to our Terms of Service and Privacy Policy. New accounts will be created automatically.
-          </p>
-        </CardContent>
-      </Card>
+    <div className="relative p-5 min-h-screen flex flex-col items-center justify-between overflow-hidden">
+      <ParticleBackground />
+
+      <div className="relative top-5">
+        <LogoHeader />
+      </div>
+
+      <div className="relative z-10 w-full max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-5">
+        <p className="text-sm text-muted-foreground text-center font-medium">
+          Schedule smarter & Post at the perfect moment.
+        </p>
+
+        <Button
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full hover:brightness-110 disabled:opacity-70"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="animate-spin" />
+              Redirecting
+            </>
+          ) : (
+            <>
+              <LinkedInIcon size={20} className="z-10" />
+              <span className="z-10 relative">Continue with LinkedIn</span>
+            </>
+          )}
+        </Button>
+
+        <div className="flex items-center gap-3">
+          <div className="h-px flex-1 bg-muted-foreground/20 rounded-full" />
+          <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+            Secure OAuth 2.0
+          </span>
+          <div className="h-px flex-1 bg-muted-foreground/20 rounded-full" />
+        </div>
+
+        <p className="text-[11px] text-muted-foreground text-center">
+          We never store your LinkedIn password.
+          <br />
+          By continuing, you agree to our{" "}
+          <Link href="/terms" className="text-blue-500 hover:underline">
+            Terms of Service
+          </Link>
+          .
+        </p>
+      </div>
+
+      <p className="text-xs text-muted-foreground text-center font-medium">
+        © {new Date().getFullYear()} PostScheduler · Built with n8n + Gemini AI
+        · Not affiliated with LinkedIn
+      </p>
     </div>
   );
 }

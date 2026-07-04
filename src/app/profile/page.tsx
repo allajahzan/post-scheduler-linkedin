@@ -1,123 +1,298 @@
-'use client';
+"use client";
 
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Navbar } from '@/components/layout/navbar';
-import { useUser } from '@/hooks/use-auth';
-import { useUpdateName } from '@/hooks/use-profile';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useEffect } from 'react';
+import { ShieldAlert, ChevronRight } from "lucide-react";
+import { LinkedInIcon } from "@/components/common/linkedin-icon";
+import { AppBadge } from "@/components/common/badge";
+import { useState, useEffect } from "react";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { useUser } from "@/hooks/use-auth";
+import { useUpdateName, useDeleteAccount } from "@/hooks/use-profile";
+import { Button } from "@/components/ui/button";
+import { AppInputField, SubmitButton } from "@/components/ui/form-fields";
+import { DeleteConfirmModal } from "@/components/common/delete-confirm-modal";
 
-const nameSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-});
+const NAV = [
+  { id: "account", label: "Account Settings" },
+  { id: "linkedin", label: "LinkedIn Connection" },
+  { id: "password", label: "Change Password" },
+  { id: "danger", label: "Danger Zone" },
+];
 
-type NameFormValues = z.infer<typeof nameSchema>;
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
+}
 
 export default function ProfilePage() {
   const { data } = useUser();
   const user = data?.user;
   const updateName = useUpdateName();
+  const deleteAccount = useDeleteAccount();
 
-  const nameForm = useForm<NameFormValues>({
-    resolver: zodResolver(nameSchema),
-  });
+  const [active, setActive] = useState("account");
+  const [name, setName] = useState("");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     if (user?.name) {
-      nameForm.reset({ name: user.name });
+      setName(user.name);
     }
-  }, [user, nameForm]);
+  }, [user]);
 
-  const onNameSubmit = (data: NameFormValues) => {
-    updateName.mutate(data);
+  if (!user) {
+    return (
+      <ProtectedRoute>
+        <div />
+      </ProtectedRoute>
+    );
+  }
+
+  const save = () => {
+    if (name && name !== user.name) {
+      updateName.mutate({ name });
+    }
   };
+
+  const handleDeleteAccount = () => {
+    deleteAccount.mutate();
+  };
+
+  // Calculate token health based on exact same logic from dashboard
+  const expiresAt = user.linkedin_token_expires_at;
+  let tokenDaysLeft = 0;
+  if (expiresAt) {
+    tokenDaysLeft = Math.ceil(
+      (new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+  }
+  const tokenHealthy = tokenDaysLeft >= 7;
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        
-        <main className="flex-1 container mx-auto px-4 py-8 max-w-3xl">
-          <div className="mb-8 flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => window.location.href = '/dashboard'} className="shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your account details and security
-              </p>
-            </div>
-          </div>
+      <div className="mx-auto max-w-7xl px-6 py-10 w-full">
+        <h1 className="text-xl font-bold tracking-tight">Profile</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage your account and connected services.
+        </p>
 
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Personal Information</CardTitle>
-                <CardDescription>
-                  Update your display name
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
-                {user?.profile_picture ? (
+        <div className="mt-8 grid gap-8 lg:grid-cols-[280px_1fr]">
+          {/* Sidebar */}
+          <aside>
+            <div className="p-5 bg-card rounded-2xl border">
+              <div className="flex flex-col items-center text-center">
+                {user.profile_picture ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img 
-                    src={user.profile_picture} 
-                    alt="Profile" 
-                    className="size-20 rounded-full object-cover border-4 border-muted shrink-0" 
+                  <img
+                    src={user.profile_picture}
+                    alt={user.name}
+                    className="flex h-16 w-16 items-center justify-center rounded-full object-cover shadow-lg border-4 border-primary/20"
                   />
                 ) : (
-                  <div className="size-20 rounded-full bg-muted flex items-center justify-center border-4 border-background shrink-0">
-                    <span className="text-2xl text-muted-foreground font-semibold">
-                      {user?.name?.charAt(0) || 'U'}
-                    </span>
+                  <div className="bg-primary flex h-16 w-16 items-center justify-center rounded-full text-lg font-bold text-primary-foreground shadow-lg">
+                    {getInitials(user.name)}
                   </div>
                 )}
+                <div className="mt-3 text-sm font-semibold text-foreground">
+                  {user.name}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {user.email}
+                </div>
+              </div>
+            </div>
 
-                <div className="flex-1 w-full max-w-md space-y-4">
-                  <form onSubmit={nameForm.handleSubmit(onNameSubmit)} className="flex items-end gap-4 w-full">
-                    <div className="space-y-2 flex-1">
-                      <label className="text-sm font-medium">Name</label>
-                      <Input {...nameForm.register('name')} />
-                      {nameForm.formState.errors.name && (
-                        <p className="text-xs text-destructive">{nameForm.formState.errors.name.message}</p>
-                      )}
-                    </div>
-                    <Button type="submit" disabled={updateName.isPending || !nameForm.formState.isDirty}>
-                      {updateName.isPending ? 'Saving...' : 'Save Name'}
-                    </Button>
-                  </form>
-                  
-                  <div className="space-y-2 w-full">
-                    <label className="text-sm font-medium text-muted-foreground">Email (from LinkedIn)</label>
-                    <Input value={user?.email || ''} readOnly disabled className="bg-muted/50 cursor-not-allowed" />
-                  </div>
-
-                  <div className="space-y-2 w-full">
-                    <label className="text-sm font-medium text-muted-foreground">Joined On</label>
-                    <Input 
-                      value={user?.created_at ? new Date(user.created_at).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      }) : ''} 
-                      readOnly 
-                      disabled 
-                      className="bg-muted/50 cursor-not-allowed" 
+            <nav className="mt-5 space-y-1">
+              {NAV.map((n) => {
+                const isActive = active === n.id;
+                return (
+                  <button
+                    key={n.id}
+                    onClick={() => setActive(n.id)}
+                    className={`group flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-[13px] font-medium transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-secondary text-foreground"
+                        : "text-muted-foreground hover:bg-card hover:text-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`flex items-center gap-2 ${n.id === "danger" ? "text-destructive/80" : ""}`}
+                    >
+                      {n.id === "danger" && <ShieldAlert size={14} />}
+                      {n.label}
+                    </span>
+                    <ChevronRight
+                      size={14}
+                      className={`transition-transform ${isActive ? "translate-x-0.5 text-primary" : "opacity-40"}`}
                     />
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+
+          {/* Content */}
+          <div className="space-y-5">
+            {active === "account" && (
+              <Section
+                title="Account Settings"
+                description="Update how you appear across PostFlow."
+              >
+                <div className="space-y-4">
+                  <AppInputField
+                    label="Display Name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="max-w-md"
+                  />
+                  <AppInputField
+                    label="Email"
+                    disabled
+                    value={user.email}
+                    className="max-w-md opacity-60 cursor-not-allowed"
+                  />
+                  <SubmitButton
+                    onClick={save}
+                    disabled={updateName.isPending || name === user.name}
+                    isPending={updateName.isPending}
+                    loadingText="Saving…"
+                  >
+                    Save
+                  </SubmitButton>
+                </div>
+              </Section>
+            )}
+
+            {active === "linkedin" && (
+              <Section
+                title="LinkedIn Connection"
+                description="Your posts publish through this connected account."
+              >
+                <div className="flex flex-col gap-5 rounded-xl border border-border bg-card p-5 sm:flex-row sm:items-center sm:justify-between shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+                      <LinkedInIcon size={20} className="text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                        Connected as {user.name}
+                        <span className="relative flex h-2 w-2">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                        </span>
+                      </div>
+                      <div
+                        className={`mt-0.5 font-mono text-[11px] ${tokenHealthy ? "text-emerald-500" : "text-amber-500"}`}
+                      >
+                        {expiresAt
+                          ? `Token expires in ${tokenDaysLeft} days`
+                          : "Token status unknown"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => {
+                        window.location.href = "/api/auth/linkedin";
+                      }}
+                      className="bg-transparent hover:bg-secondary"
+                      style={{
+                        borderColor: "var(--linkedin)",
+                        color: "#4aa3d1",
+                      }}
+                    >
+                      Reconnect
+                    </Button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Section>
+            )}
 
+            {active === "password" && (
+              <Section
+                title="Change Password"
+                description="Currently you sign in with LinkedIn only."
+                badge="Coming soon"
+              >
+                <div className="rounded-xl border border-dashed border-border bg-secondary/30 p-8 text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Password-based sign-in isn't available yet. You'll be
+                    notified when it ships.
+                  </p>
+                </div>
+              </Section>
+            )}
+
+            {active === "danger" && (
+              <Section
+                title="Danger Zone"
+                description="Irreversible actions. Proceed with caution."
+                tone="destructive"
+              >
+                <div className="rounded-xl border border-destructive/40 bg-destructive/5 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1">
+                      <div className="text-sm font-semibold text-foreground">
+                        Delete Account
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        This will permanently delete all your posts and data.
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => setIsDeleteModalOpen(true)}
+                      className="bg-transparent border-destructive text-destructive hover:bg-destructive hover:text-white"
+                    >
+                      Delete Account
+                    </Button>
+                  </div>
+                </div>
+              </Section>
+            )}
           </div>
-        </main>
+        </div>
       </div>
+
+      <DeleteConfirmModal
+        title="Delete Account"
+        description="Are you sure you want to permanently delete your account, posts, and notifications? This action cannot be undone."
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteAccount}
+        isPending={deleteAccount.isPending}
+      />
     </ProtectedRoute>
+  );
+}
+
+function Section({
+  title,
+  description,
+  badge,
+  tone,
+  children,
+}: {
+  title: string;
+  description: string;
+  badge?: string;
+  tone?: "destructive";
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      className={`rounded-2xl border p-5 ${tone === "destructive" ? "border-destructive/30 bg-card" : "border-border bg-card"} shadow-sm space-y-5`}
+    >
+      <div className="mb-5 flex items-start justify-between gap-2">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+        {badge && <AppBadge>{badge}</AppBadge>}
+      </div>
+      {children}
+    </section>
   );
 }

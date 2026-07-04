@@ -1,129 +1,174 @@
-'use client';
+"use client";
 
-import { ProtectedRoute } from '@/components/auth/protected-route';
-import { Navbar } from '@/components/layout/navbar';
-import { usePosts, Post } from '@/hooks/use-posts';
-import { useUser } from '@/hooks/use-auth';
-import { PostCard } from '@/components/posts/post-card';
-import { CreatePostModal } from '@/components/posts/create-post-modal';
-import { EditPostModal } from '@/components/posts/edit-post-modal';
-import { DeleteConfirmModal } from '@/components/posts/delete-confirm-modal';
-import { Button } from '@/components/ui/button';
-import { Plus, Inbox, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { usePosts, Post, useDeletePost } from "@/hooks/use-posts";
+import { useUser } from "@/hooks/use-auth";
+import { PostCard, EmptySlotCard } from "@/components/posts/post-card";
+import { CreatePostModal } from "@/components/posts/create-post-modal";
+import { EditPostModal } from "@/components/posts/edit-post-modal";
+import { DeleteConfirmModal } from "@/components/common/delete-confirm-modal";
+import { Button } from "@/components/ui/button";
+import { Plus, AlertTriangle, Loader2 } from "lucide-react";
+import { useState, useMemo } from "react";
+
+const MAX_SLOTS = 3;
 
 export default function DashboardPage() {
   const { data: posts, isLoading: isPostsLoading } = usePosts();
+  const deletePost = useDeletePost();
   const { data: userData, isLoading: isUserLoading } = useUser();
-  
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
   const [deletingPost, setDeletingPost] = useState<Post | null>(null);
 
-  const quota = userData?.quota || { used: 0, limit: 3, next_reset_at: null };
+  const quota = userData?.quota || {
+    used: 0,
+    limit: MAX_SLOTS,
+    next_reset_at: null,
+  };
   const isLimitReached = quota.used >= quota.limit;
-  
-  // Format the next reset time if available
-  let nextResetText = '';
-  if (isLimitReached && quota.next_reset_at) {
-    const resetDate = new Date(quota.next_reset_at);
-    const hoursLeft = Math.max(0, Math.ceil((resetDate.getTime() - Date.now()) / (1000 * 60 * 60)));
-    
+  const emptySlots = Math.max(0, MAX_SLOTS - (posts?.length || 0));
+
+  const tokenWarning = useMemo(() => {
+    const expiresAt = userData?.user?.linkedin_token_expires_at;
+    if (!expiresAt) return false;
+    const daysLeft = Math.ceil(
+      (new Date(expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    return daysLeft < 7 ? daysLeft : false;
+  }, [userData]);
+
+  const nextResetText = useMemo(() => {
+    if (!isLimitReached || !quota.next_reset_at) return "";
+    const hoursLeft = Math.max(
+      0,
+      Math.ceil(
+        (new Date(quota.next_reset_at).getTime() - Date.now()) /
+          (1000 * 60 * 60),
+      ),
+    );
     if (hoursLeft > 24) {
       const days = Math.floor(hoursLeft / 24);
-      nextResetText = `Quota resets in ${days} ${days === 1 ? 'day' : 'days'}`;
-    } else {
-      nextResetText = `Quota resets in ${hoursLeft} ${hoursLeft === 1 ? 'hour' : 'hours'}`;
+      return `Quota resets in ${days} ${days === 1 ? "day" : "days"}`;
     }
-  }
+    return `Quota resets in ${hoursLeft} ${hoursLeft === 1 ? "hour" : "hours"}`;
+  }, [isLimitReached, quota.next_reset_at]);
 
   const isLoading = isPostsLoading || isUserLoading;
-  const activePostCount = posts?.length || 0;
+
+  const openCreate = () => {
+    setEditingPost(null);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleConfirmDeletePost = () => {
+    if (!deletingPost) return;
+    deletePost.mutate(deletingPost._id, {
+      onSuccess: () => {
+        setDeletingPost(null);
+      },
+    });
+  };
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Your Posts</h1>
-              <p className="text-muted-foreground mt-1">
-                Manage your scheduled LinkedIn posts ({quota.used}/{quota.limit} used in last 3 days)
-              </p>
-            </div>
-            
-            <div className="flex flex-col items-end gap-1">
-              <Button 
-                onClick={() => setIsCreateModalOpen(true)}
-                disabled={isLimitReached}
-                className="gap-2 shadow-sm"
-              >
-                <Plus className="size-4" />
-                Create New Post
-              </Button>
-              {isLimitReached && (
-                <span className="text-xs text-destructive font-medium">
-                  {nextResetText || 'You have reached the 3-post limit.'}
-                </span>
-              )}
+      <div className="mx-auto max-w-7xl w-full px-6 py-10">
+        {/* LinkedIn Token Expiry Warning */}
+        {tokenWarning !== false && (
+          <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+            <AlertTriangle
+              size={16}
+              className="mt-0.5 shrink-0 text-amber-400"
+            />
+            <div className="text-[13px]">
+              <span className="font-semibold text-amber-400">
+                LinkedIn token expires in {tokenWarning}{" "}
+                {tokenWarning === 1 ? "day" : "days"}.
+              </span>{" "}
+              <span className="text-muted-foreground">
+                Reconnect from your profile to avoid interruptions.
+              </span>
             </div>
           </div>
+        )}
 
+        {/* Header */}
+        <div className="flex gap-5 items-end justify-between">
+          <div className="">
+            <h1 className="text-xl font-bold tracking-tight">Your Posts</h1>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-mono">{quota.used}</span> of{" "}
+              <span className="font-mono">{quota.limit}</span> slots used
+            </p>
+          </div>
+
+          <div className="relative group/btn">
+            <Button
+              onClick={openCreate}
+              disabled={isLimitReached}
+              className="disabled:cursor-not-allowed"
+            >
+              <Plus />
+              Schedule Post
+            </Button>
+            {isLimitReached && (
+              <div className="pointer-events-none absolute right-0 top-full z-10 mt-2 hidden w-max max-w-xs rounded-full border bg-card px-2 py-2 text-xs text-muted-foreground font-medium shadow-lg group-hover/btn:block">
+                {nextResetText || ""}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Posts Grid */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader2 className="size-8 animate-spin text-primary" />
+            <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <Loader2 className="size-8 animate-spin mb-4 text-primary" />
+              <p>Loading your schedule...</p>
             </div>
           ) : (
             <>
-              {activePostCount === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-xl bg-muted/30">
-                  <div className="bg-primary/10 p-4 rounded-full mb-4">
-                    <Inbox className="size-10 text-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
-                  <p className="text-muted-foreground max-w-sm mb-6">
-                    Create your first post to start automating your LinkedIn workflow.
-                  </p>
-                  <Button onClick={() => setIsCreateModalOpen(true)} disabled={isLimitReached} className="gap-2">
-                    <Plus className="size-4" />
-                    Create New Post
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {posts?.map((post) => (
-                    <PostCard 
-                      key={post._id}
-                      post={post}
-                      onEdit={setEditingPost}
-                      onDelete={setDeletingPost}
-                    />
-                  ))}
-                </div>
-              )}
+              {posts?.map((post, index) => (
+                <PostCard
+                  key={post._id}
+                  post={post}
+                  index={index}
+                  onEdit={setEditingPost}
+                  onDelete={setDeletingPost}
+                />
+              ))}
+
+              {Array.from({ length: emptySlots }).map((_, i) => (
+                <EmptySlotCard key={`empty-${i}`} onClick={openCreate} />
+              ))}
             </>
           )}
-        </main>
-
-        <CreatePostModal 
-          isOpen={isCreateModalOpen} 
-          onClose={() => setIsCreateModalOpen(false)} 
-        />
-        
-        <EditPostModal 
-          post={editingPost}
-          isOpen={!!editingPost}
-          onClose={() => setEditingPost(null)}
-        />
-        
-        <DeleteConfirmModal
-          post={deletingPost}
-          isOpen={!!deletingPost}
-          onClose={() => setDeletingPost(null)}
-        />
+        </div>
       </div>
+
+      <CreatePostModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setEditingPost(null);
+        }}
+      />
+
+      <EditPostModal
+        post={editingPost}
+        isOpen={!!editingPost}
+        onClose={() => setEditingPost(null)}
+      />
+
+      <DeleteConfirmModal
+        title="Delete Post"
+        description={`Are you sure you want to delete the post "${deletingPost?.title}"? This action cannot be undone.`}
+        isOpen={!!deletingPost}
+        onClose={() => setDeletingPost(null)}
+        onConfirm={handleConfirmDeletePost}
+        isPending={deletePost.isPending}
+      />
     </ProtectedRoute>
   );
 }

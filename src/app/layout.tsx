@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ClientOnly } from "@/components/layout/client-only";
+import { DM_Sans } from "next/font/google";
 
-const inter = Inter({
-  variable: "--font-sans",
+const dmSans = DM_Sans({
   subsets: ["latin"],
+  variable: "--font-dm-sans",
+  preload: true,
+  weight: ["100", "200", "300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "Post Scheduler-LinkedIn",
+  title: "Post Scheduler - LinkedIn Automation",
   description: "Manage scheduled posts for LinkedIn workflow",
 };
 
@@ -21,12 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} font-sans h-full antialiased`}
-    >
+    <html lang="en" className={`${dmSans.className} h-full antialiased`}>
       <head>
-        <link rel="icon" href="/logo.png" />
+        <link rel="icon" href="favicon.ico" />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ClientOnly>

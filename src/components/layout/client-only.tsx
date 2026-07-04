@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export function ClientOnly({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
@@ -9,7 +9,7 @@ export function ClientOnly({ children }: { children: React.ReactNode }) {
     setHasMounted(true);
   }, []);
 
-  if (!hasMounted && process.env.NODE_ENV === 'development') {
+  if (!hasMounted && process.env.NODE_ENV === "development") {
     return null; // Or a loading spinner if preferred
   }
 
