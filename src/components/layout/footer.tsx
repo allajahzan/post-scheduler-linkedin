@@ -16,7 +16,7 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-3">
             <a
-              href="https://github.com/allajahzan/post-scheduler-linkedin"
+              href="https://github.com/allajahzan/postscheduler-linkedin"
               target="_blank"
               rel="noreferrer"
               className="p-1 text-muted-foreground hover:text-foreground transition-colors"
