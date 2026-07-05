@@ -173,6 +173,13 @@ export default function DashboardPage() {
             </div>
           ) : (
             <>
+              {activeTab === "scheduled" &&
+                Array.from({
+                  length: Math.max(0, quota.limit - quota.used),
+                }).map((_, i) => (
+                  <EmptySlotCard key={`empty-${i}`} onClick={openCreate} />
+                ))}
+
               {(activeTab === "scheduled"
                 ? scheduledPosts
                 : publishedPosts
@@ -185,13 +192,6 @@ export default function DashboardPage() {
                   onDelete={setDeletingPost}
                 />
               ))}
-
-              {activeTab === "scheduled" &&
-                Array.from({
-                  length: Math.max(0, quota.limit - quota.used),
-                }).map((_, i) => (
-                  <EmptySlotCard key={`empty-${i}`} onClick={openCreate} />
-                ))}
 
               {activeTab === "scheduled" &&
                 scheduledPosts.length === 0 &&

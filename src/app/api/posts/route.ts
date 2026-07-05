@@ -33,10 +33,13 @@ export async function GET(request: Request) {
     const db = await getDb();
     const total = await db.collection("posts").countDocuments(query);
 
+    const sortCriteria: any =
+      status === "done" ? { updated_at: -1 } : { created_at: -1 };
+
     const posts = await db
       .collection<PostDocument>("posts")
       .find(query)
-      .sort({ created_at: 1 }) // Sort by creation time ascending
+      .sort(sortCriteria)
       .skip(skip)
       .limit(limit)
       .toArray();
