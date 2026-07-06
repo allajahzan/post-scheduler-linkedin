@@ -26,13 +26,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => null);
+    let body = await request.json().catch(() => null);
 
     if (!body) {
       return NextResponse.json(
         { error: "Request body is required" },
         { status: 400 },
       );
+    }
+
+    // If n8n sends a stringified JSON string (e.g. using {{ JSON.stringify($json) }})
+    if (typeof body === 'string') {
+      try {
+        body = JSON.parse(body);
+      } catch (e) {
+        return NextResponse.json(
+          { error: "Invalid JSON string in request body" },
+          { status: 400 },
+        );
+      }
     }
 
     // Support both a single topic object or an array of topics
