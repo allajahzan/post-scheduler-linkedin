@@ -276,6 +276,7 @@ export default function DashboardPage() {
         onClose={() => setDeletingPost(null)}
         onConfirm={handleConfirmDeletePost}
         isPending={deletePost.isPending}
+        disabled={deletingPost?.status === "done"}
       />
 
       {showSuggestionsModal && (

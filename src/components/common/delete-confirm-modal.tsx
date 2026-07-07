@@ -16,6 +16,7 @@ interface DeleteConfirmModalProps {
   isPending: boolean;
   title?: string;
   description?: React.ReactNode;
+  disabled?: boolean;
 }
 
 export function DeleteConfirmModal({
@@ -25,10 +26,11 @@ export function DeleteConfirmModal({
   isPending,
   title = "Delete Item",
   description = "Are you sure you want to delete this? This action cannot be undone.",
+  disabled = false,
 }: DeleteConfirmModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="p-0 bg-card backdrop-blur-xl gap-0">
+      <DialogContent className="sm:max-w-md p-0 bg-card backdrop-blur-xl gap-0">
         <DialogHeader className="p-5 gap-1">
           <div className="flex items-center gap-2 text-destructive">
             <DialogTitle>{title}</DialogTitle>
@@ -49,6 +51,7 @@ export function DeleteConfirmModal({
             type="button"
             onClick={onConfirm}
             isPending={isPending}
+            disabled={disabled}
             loadingText="Deleting..."
           >
             Delete
