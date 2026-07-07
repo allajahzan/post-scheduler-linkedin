@@ -49,7 +49,7 @@ export default function SuggestionsPage() {
               Curated post ideas based on the latest news in your selected
               topics.{" "}
               <span className="text-primary font-medium">
-                New suggestions arrive every 3 days.
+                New suggestions arrive every morning.
               </span>
             </p>
           </div>
